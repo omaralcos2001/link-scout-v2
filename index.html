@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Execute Workflow</title>
+<style>
+  :root{
+    --bg:#f7f8fb;--card:#fff;--ink:#0f172a;--muted:#64748b;--brand:#10b981;--brand-ink:#064e3b;
+    --ring:#93c5fd;--border:#e2e8f0;--danger:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+  .wrap{max-width:920px;margin:28px auto;padding:0 16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.03);padding:20px}
+  h1{margin:6px 0 2px;font-size:28px}
+  .sub{color:var(--muted);margin:0 0 18px}
+  .section{border:1px solid var(--border);border-radius:14px;padding:16px;margin:14px 0;background:#fff}
+  .section h2{font-size:16px;margin:0 0 8px}
+  label .req{color:var(--danger)}
+  .drop{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#fbfdff;border:1px dashed #cbd5e1;border-radius:12px;padding:14px 12px;cursor:pointer}
+  .drop:focus-within,.drop.drag{outline:3px solid var(--ring);outline-offset:2px;border-color:#60a5fa}
+  .drop .hint{color:var(--muted);font-size:14px}
+  input[type="file"]{display:none}
+  .counter{font-size:12px;color:var(--muted)}
+  .error{color:var(--danger);font-size:13px;margin-top:6px;display:none}
+  .error.show{display:block}
+
+  /* GRID: 3 cards per row */
+  .list{margin:12px 0 0;display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:12px;padding:0;list-style:none}
+  .item{border:1px solid var(--border);background:#ffffff;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:110px}
+  .item .top{display:flex;align-items:flex-start;gap:8px}
+  .icon{width:28px;height:28px;display:inline-grid;place-items:center;border-radius:8px;background:#eef2ff;font-size:14px;flex:0 0 28px}
+  .name{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta{color:var(--muted);font-size:12px}
+  .actions{margin-top:auto;display:flex;gap:8px}
+  .actions a,.actions button{border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 8px;font-size:12px}
+  .actions .danger{color:var(--danger);border-color:#fecaca}
+
+  .btn{appearance:none;border-radius:10px;border:0;padding:10px 14px;font-weight:600;background:var(--brand);color:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-outline{border:1px solid var(--border);background:#fff;color:var(--ink)}
+  .field{margin:14px 0}
+  .field input[type="email"]{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;font:inherit}
+  .field input[type="email"]:focus{outline:3px solid var(--ring);outline-offset:2px;border-color:#60a5fa}
+  .msg{margin-top:10px;font-size:14px}
+
+  /* Long green bar with centered button */
+  .cta-bar{margin-top:16px;background:var(--brand);border-radius:14px;min-height:76px;display:flex;align-items:center;justify-content:center}
+  .cta-bar .btn-inverse{background:#fff;color:var(--brand-ink);border:1px solid #d1fae5;padding:12px 18px}
+
+  /* Responsive fallback */
+  @media (max-width:820px){ .list{grid-template-columns:repeat(2, minmax(0,1fr));} }
+  @media (max-width:560px){ .list{grid-template-columns:repeat(1, minmax(0,1fr));} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Ready to Execute</h1>
+      <p class="sub">Fill in the parameters below and execute your workflow to see results.</p>
+
+      <!-- Section A -->
+      <div class="section" id="sec-constellation">
+        <h2><label for="files-const">Constellation Referring Domains <span class="req">*</span></label></h2>
+        <div class="drop" id="drop-constellation" tabindex="0" role="button" aria-describedby="hint-const">
+          <div>
+            <div class="hint" id="hint-const">Choose or drop files (max 10).</div>
+            <div class="counter"><span id="count-const">0</span>/10 selected</div>
+          </div>
+          <button class="btn-outline" type="button" id="pick-const">Choose files</button>
+          <input id="files-const" type="file" multiple
+                 accept=".csv,.tsv,.xlsx,.xls,.zip,.txt,.pdf,.png,.jpg,.jpeg,.json" />
+        </div>
+        <ul class="list" id="list-const" aria-live="polite"></ul>
+        <div class="error" id="err-const">Please add at least one file (max 10).</div>
+      </div>
+
+      <!-- Section B -->
+      <div class="section" id="sec-competitor">
+        <h2><label for="files-comp">Competitor Backlinks Report <span class="req">*</span></label></h2>
+        <div class="drop" id="drop-competitor" tabindex="0" role="button" aria-describedby="hint-comp">
+          <div>
+            <div class="hint" id="hint-comp">Choose or drop files (max 10).</div>
+            <div class="counter"><span id="count-comp">0</span>/10 selected</div>
+          </div>
+          <button class="btn-outline" type="button" id="pick-comp">Choose files</button>
+          <input id="files-comp" type="file" multiple
+                 accept=".csv,.tsv,.xlsx,.xls,.zip,.txt,.pdf,.png,.jpg,.jpeg,.json" />
+        </div>
+        <ul class="list" id="list-comp" aria-live="polite"></ul>
+        <div class="error" id="err-comp">Please add at least one file (max 10).</div>
+      </div>
+
+      <!-- Email -->
+      <div class="section">
+        <div class="field">
+          <label for="email">Your Email <span class="req">*</span></label>
+          <input id="email" type="email" placeholder="name@example.com" required />
+        </div>
+        <div class="error" id="err-email">Please enter a valid email.</div>
+      </div>
+
+      <!-- LONG GREEN BOX WITH CENTERED BUTTON -->
+      <div class="cta-bar">
+        <button id="submit" class="btn-inverse btn">🚀 Execute Workflow</button>
+      </div>
+
+      <div id="message" class="msg" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+<script>
+/* ---------- Reusable uploader controller ---------- */
+function Uploader(opts){
+  const state = { files: [] };
+  const max = opts.max || 10;
+
+  const input   = document.getElementById(opts.inputId);
+  const drop    = document.getElementById(opts.dropId);
+  const list    = document.getElementById(opts.listId);
+  const counter = document.getElementById(opts.countId);
+  const pickBtn = document.getElementById(opts.pickBtnId);
+
+  function sizeFmt(bytes){const u=['B','KB','MB','GB'];let i=0,b=bytes;while(b>=1024&&i<u.length-1){b/=1024;i++}return b.toFixed(b<10&&i>0?1:0)+' '+u[i];}
+  function iconFor(file){
+    const t=(file.type||"").toLowerCase();
+    if(t.includes('image')) return '🖼️';
+    if(t.includes('pdf'))   return '📄';
+    if(t.includes('zip'))   return '🗜️';
+    if(t.includes('spreadsheet')||/\.(xlsx?|csv|tsv)$/i.test(file.name)) return '📊';
+    if(/\.(json|txt)$/i.test(file.name)) return '🧾';
+    return '📁';
+  }
+
+  function render(){
+    list.innerHTML = '';
+    counter.textContent = state.files.length;
+    state.files.forEach((file, idx)=>{
+      const li = document.createElement('li');
+      li.className = 'item';
+      const url = URL.createObjectURL(file);
+      li.innerHTML = `
+        <div class="top">
+          <span class="icon" aria-hidden="true">${iconFor(file)}</span>
+          <div style="min-width:0">
+            <div class="name" title="${file.name}">${file.name}</div>
+            <div class="meta">${file.type || 'unknown'} • ${sizeFmt(file.size)}</div>
+          </div>
+        </div>
+        <div class="actions">
+          <a href="${url}" target="_blank" rel="noopener">Preview</a>
+          <button type="button" class="danger" data-remove="${idx}">Remove</button>
+        </div>
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  function addFiles(fileList){
+    const incoming = Array.from(fileList || []);
+    if(!incoming.length) return;
+    const merged = state.files.concat(incoming).slice(0, max);
+    const seen = new Set();
+    state.files = merged.filter(f=>{
+      const key=f.name+'|'+f.size; if(seen.has(key)) return false; seen.add(key); return true;
+    }).slice(0,max);
+    if(state.files.length === max && incoming.length){
+      toast(`Max ${max} files reached for "${opts.label}".`);
+    }
+    render();
+  }
+  function removeAt(i){ state.files.splice(i,1); render(); }
+
+  pickBtn.addEventListener('click', ()=> input.click());
+  input.addEventListener('change', e => { addFiles(e.target.files); input.value=''; });
+
+  // drag & drop
+  ['dragenter','dragover'].forEach(ev=> drop.addEventListener(ev, e=>{
+    e.preventDefault(); drop.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(ev=> drop.addEventListener(ev, e=>{
+    e.preventDefault(); drop.classList.remove('drag');
+  }));
+  drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+
+  list.addEventListener('click', e=>{
+    const btn = e.target.closest('[data-remove]');
+    if(btn){ removeAt(parseInt(btn.getAttribute('data-remove'),10)); }
+  });
+
+  return {
+    getFiles(){ return state.files; },
+    appendTo(formData, fieldName){
+      state.files.forEach(f=> formData.append(fieldName, f, f.name));
+    }
+  };
+}
+
+/* ---------- Toast helper (inline) ---------- */
+function toast(msg){
+  const el = document.getElementById('message');
+  el.textContent = msg;
+  el.style.color = msg.toLowerCase().includes('error') ? 'var(--danger)' : 'var(--brand-ink)';
+}
+
+/* ---------- Instantiate uploaders ---------- */
+const upConst = Uploader({
+  inputId:'files-const', dropId:'drop-constellation', listId:'list-const',
+  countId:'count-const', pickBtnId:'pick-const', max:10, label:'Constellation Referring Domains'
+});
+const upComp = Uploader({
+  inputId:'files-comp', dropId:'drop-competitor', listId:'list-comp',
+  countId:'count-comp', pickBtnId:'pick-comp', max:10, label:'Competitor Backlinks Report'
+});
+
+/* ---------- Submit handling (all 3 sections required) ---------- */
+document.getElementById('submit').addEventListener('click', async (e)=>{
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const btn = e.currentTarget;
+
+  // reset errors
+  ['err-const','err-comp','err-email'].forEach(id=>document.getElementById(id).classList.remove('show'));
+
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  let valid = true;
+
+  if(upConst.getFiles().length === 0){ document.getElementById('err-const').classList.add('show'); valid = false; }
+  if(upComp.getFiles().length === 0){ document.getElementById('err-comp').classList.add('show'); valid = false; }
+  if(!emailOk){ document.getElementById('err-email').classList.add('show'); valid = false; }
+
+  if(!valid){ toast('Please complete the required sections.'); return; }
+
+  const fd = new FormData();
+  fd.append('email', email);
+  upConst.appendTo(fd, 'constellation_files[]');
+  upComp.appendTo(fd, 'competitor_files[]');
+
+  // REQUIRED WEBHOOK
+  const WEBHOOK = 'https://n8n-14lp.onrender.com/webhook/link-scout-v2';
+
+  btn.disabled = true; toast('Uploading…');
+
+  try{
+    const res = await fetch(WEBHOOK, { method:'POST', body: fd });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    toast('Submitted! The bot the working on it.');
+  }catch(err){
+    toast(`Error submitting: ${err.message}`);
+  }finally{
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
