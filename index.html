@@ -245,7 +245,7 @@ document.getElementById('submit').addEventListener('click', async (e)=>{
   try{
     const res = await fetch(WEBHOOK, { method:'POST', body: fd });
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    toast('Submitted! The bot the working on it.');
+    toast('Submitted! The bot is working on it.');
   }catch(err){
     toast(`Error submitting: ${err.message}`);
   }finally{
