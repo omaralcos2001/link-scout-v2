@@ -214,7 +214,44 @@ const upComp = Uploader({
   countId:'count-comp', pickBtnId:'pick-comp', max:10, label:'Competitor Backlinks Report'
 });
 
-/* ---------- Submit handling (all 3 sections required) ---------- */
+/* ---------- TEMP HOST UPLOAD → return public LINK (not binary) ---------- */
+/* Tries tmpfiles.org first; falls back to file.io. Both are public temp hosts.
+   If your org has S3/R2 pre-signed uploads, replace this function with that. */
+async function uploadToTemp(file){
+  // 1) tmpfiles.org
+  try{
+    const fd = new FormData(); fd.append('file', file, file.name);
+    const r = await fetch('https://tmpfiles.org/api/v1/upload', { method:'POST', body: fd });
+    const j = await r.json();
+    const url = j?.data?.url || j?.url;
+    if(url && url.startsWith('http')) return url;
+    throw new Error('tmpfiles no url');
+  }catch(_){}
+
+  // 2) file.io (link usually in j.link)
+  try{
+    const fd = new FormData(); fd.append('file', file, file.name);
+    const r = await fetch('https://file.io/?expires=1w', { method:'POST', body: fd });
+    const j = await r.json();
+    const url = j?.link;
+    if(url && url.startsWith('http')) return url;
+    throw new Error('file.io no url');
+  }catch(_){}
+
+  throw new Error('Upload failed (CORS or service unavailable).');
+}
+
+async function uploadAll(files, label){
+  const urls = [];
+  for(let i=0;i<files.length;i++){
+    toast(`Uploading ${label} ${i+1}/${files.length}…`);
+    const url = await uploadToTemp(files[i]);
+    urls.push(url);
+  }
+  return urls;
+}
+
+/* ---------- Submit handling (send ONLY LINKS to webhook) ---------- */
 document.getElementById('submit').addEventListener('click', async (e)=>{
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
@@ -232,22 +269,33 @@ document.getElementById('submit').addEventListener('click', async (e)=>{
 
   if(!valid){ toast('Please complete the required sections.'); return; }
 
-  const fd = new FormData();
-  fd.append('email', email);
-  upConst.appendTo(fd, 'constellation_files[]');
-  upComp.appendTo(fd, 'competitor_files[]');
-
-  // REQUIRED WEBHOOK
-  const WEBHOOK = 'https://n8n-14lp.onrender.com/webhook/link-scout-v2';
-
-  btn.disabled = true; toast('Uploading…');
+  btn.disabled = true;
 
   try{
-    const res = await fetch(WEBHOOK, { method:'POST', body: fd });
+    // 1) Upload to temp host(s) → get public links
+    const constellationLinks = await uploadAll(upConst.getFiles(), 'Constellation file');
+    const competitorLinks    = await uploadAll(upComp.getFiles(), 'Competitor file');
+
+    // 2) Send JSON with LINKS (no binary) to the merged webhook
+    const payload = {
+      email,
+      constellation_file_urls: constellationLinks,
+      competitor_file_urls: competitorLinks
+    };
+
+    toast('Submitting links to workflow…');
+
+    const WEBHOOK = 'https://n8n-14lp.onrender.com/webhook/merged-webhook';
+    const res = await fetch(WEBHOOK, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    });
+
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     toast('Submitted! The bot is working on it.');
   }catch(err){
-    toast(`Error submitting: ${err.message}`);
+    toast(`Error: ${err.message}. If uploads are blocked, use your own storage or allow CORS.`);
   }finally{
     btn.disabled = false;
   }
